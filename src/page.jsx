@@ -82,6 +82,21 @@ export default function PrayerTimes() {
     const [lastFetched, setLastFetched] = useState(null);
     const abortControllerRef = useRef(null);
 
+    // Date/Time display state
+    const [currentDateTime, setCurrentDateTime] = useState(() => {
+        return new Date().toLocaleString('en-US', {
+            timeZone: 'Asia/Gaza',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    });
+    const [isEditingDateTime, setIsEditingDateTime] = useState(false);
+    const [customDateTime, setCustomDateTime] = useState({ date: '', time: '' });
+
     // Fetch prayer times from API
     const fetchPrayerTimes = useCallback(async () => {
         if (abortControllerRef.current) {
@@ -144,7 +159,7 @@ export default function PrayerTimes() {
                     }
                 });
 
-                setLastFetched(new Date().toLocaleString('ar-PS', {
+                setLastFetched(new Date().toLocaleString('en-US', {
                     hour: '2-digit',
                     minute: '2-digit',
                     day: 'numeric',
@@ -178,6 +193,52 @@ export default function PrayerTimes() {
     useEffect(() => {
         fetchPrayerTimes();
     }, [fetchPrayerTimes]);
+
+    // Update date/time every second
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setCurrentDateTime(new Date().toLocaleString('en-US', {
+                timeZone: 'Asia/Gaza',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            }));
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, []);
+
+    // Handle date/time editing
+    const handleDateTimeClick = () => {
+        const [dateStr, timeStr] = currentDateTime.split(', ');
+        const [month, day, year] = dateStr.split('/');
+        const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        setCustomDateTime({ date: formattedDate, time: timeStr });
+        setIsEditingDateTime(true);
+    };
+
+    const handleDateTimeSave = () => {
+        const date = new Date(`${customDateTime.date}T${customDateTime.time}`);
+        const formatted = date.toLocaleString('en-US', {
+            timeZone: 'Asia/Gaza',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        setCurrentDateTime(formatted);
+        setIsEditingDateTime(false);
+    };
+
+    const handleDateTimeCancel = () => {
+        setIsEditingDateTime(false);
+        setCustomDateTime({ date: '', time: '' });
+    };
 
     const prayerNames = {
         fajr: 'الفجر',
@@ -292,6 +353,51 @@ export default function PrayerTimes() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-purple-50 p-8">
+            {/* Date/Time Display */}
+            <div className="fixed top-4 right-4 z-50" dir="ltr">
+                <div className="bg-white rounded-lg shadow-lg p-3 border border-gray-200">
+                    {isEditingDateTime ? (
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="date"
+                                value={customDateTime.date}
+                                onChange={(e) => setCustomDateTime(prev => ({ ...prev, date: e.target.value }))}
+                                className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                            />
+                            <input
+                                type="time"
+                                value={customDateTime.time}
+                                onChange={(e) => setCustomDateTime(prev => ({ ...prev, time: e.target.value }))}
+                                className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                            />
+                            <button
+                                onClick={handleDateTimeSave}
+                                className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"
+                            >
+                                <Save size={16} />
+                            </button>
+                            <button
+                                onClick={handleDateTimeCancel}
+                                className="p-1 text-gray-600 hover:bg-gray-50 rounded"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    ) : (
+                        <div
+                            className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 rounded px-2 py-1"
+                            onClick={handleDateTimeClick}
+                        >
+                            <Clock size={16} className="text-emerald-600" />
+                            <span className="text-sm font-mono text-gray-700">
+                                {currentDateTime}
+                            </span>
+                            <Edit2 size={14} className="text-gray-400" />
+                        </div>
+                    )}
+                </div>
+            </div>
+
             <div className="max-w-6xl mx-auto">
                 {/* Header */}
                 <div className="text-center mb-8">
@@ -446,7 +552,7 @@ export default function PrayerTimes() {
                     ))}
                 </div>
 
-               
+
             </div>
         </div>
     );
